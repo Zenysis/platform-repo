@@ -22,7 +22,7 @@ runs:
       id: extract-branch
       shell: bash
       run: |
-        source .github/scripts/utils.sh
+        source .github/actions/scripts/utils.sh
         BRANCH_NAME=$(sanitize_branch_name "${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}")
         echo "sanitized_branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
 
