@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1
+ARG TAG=master
+ARG BASE_IMAGE=251860034030.dkr.ecr.us-east-1.amazonaws.com/etl-pipeline-common
+
+FROM ${BASE_IMAGE}:${TAG}
+
+# These ARG's MUST be after the FROM statement, otherwise they won't be available
+# in this context.
+ARG PIPELINE_INCLUSION=pipeline
+ARG PIPELINE_TARGET=pipeline/
+# Default to copying the entire config folder.
+ARG CONFIG_INCLUSION=config
+ARG CONFIG_TARGET=config/
+# Default to copying the dataprep token
+ARG DATAPREP_TOKEN_INCLUSION=token
+# Default to copying all python files in the prod/roledefs folder.
+ARG ROLEDEF_INCLUSION=*
+# Default to copying all files in the scripts/cli_util/deployment_credentials folder.
+ARG DEPLOYMENT_CREDENTIALS_INCLUSION=*
+
+COPY ${PIPELINE_INCLUSION} ${PIPELINE_TARGET}
+COPY ${CONFIG_INCLUSION} ${CONFIG_TARGET}
+COPY prod/dataprep/${DATAPREP_TOKEN_INCLUSION} prod/dataprep/
+COPY prod/roledefs/${ROLEDEF_INCLUSION}.py prod/roledefs/
+COPY scripts/cli_util/deployment_credentials/${DEPLOYMENT_CREDENTIALS_INCLUSION}.py scripts/cli_util/deployment_credentials/
+
+ENV ZEN_PROD=1
+ENV ZEN_HOME=/zenysis
+ENV R77_SRC_ROOT=/zenysis
+ENV PYTHONPATH=/zenysis
+ENV ZEN_HOST_PLATFORM=AWS-CLOUD
+
+USER zenysis
