@@ -1,0 +1,59 @@
+name: Build Pipeline Final Image
+description: Builds and pushes the final pipeline Docker image for an integration
+
+inputs:
+  integration:
+    description: Integration to build (e.g. default, mz, rw)
+    required: true
+  image_tag:
+    description: Docker image tag
+    required: true
+  aws_role:
+    description: IAM role ARN to assume
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Configure aws credentials
+      uses: aws-actions/configure-aws-credentials@v4.2.1
+      with:
+        role-to-assume: ${{ inputs.aws_role }}
+        role-session-name: GitHub_AWS_via_FederatedOIDC
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build final image for ${{ inputs.integration }}
+      shell: bash
+      env:
+        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        PIPELINE_COMMON_REPOSITORY: etl-pipeline-common
+        IMAGE_TAG: ${{ inputs.image_tag }}
+      run: |
+        set -x
+        set -a
+        source docker/pipeline/build_env/${{ inputs.integration }}.env
+        set +a
+
+        docker buildx build \
+          --tag "$REGISTRY/$PIPELINE_REPOSITORY:$IMAGE_TAG" \
+          -f docker/pipeline/Dockerfile.final \
+          --cache-from type=registry,ref="$REGISTRY/$PIPELINE_REPOSITORY:$IMAGE_TAG" \
+          --cache-from type=registry,ref="$REGISTRY/$PIPELINE_REPOSITORY:master" \
+          --build-arg BASE_IMAGE=$REGISTRY/$PIPELINE_COMMON_REPOSITORY \
+          --build-arg TAG=$IMAGE_TAG \
+          --build-arg PIPELINE_INCLUSION="$PIPELINE_INCLUSION" \
+          --build-arg PIPELINE_TARGET="$PIPELINE_TARGET" \
+          --build-arg CONFIG_INCLUSION="$CONFIG_INCLUSION" \
+          --build-arg CONFIG_TARGET="$CONFIG_TARGET" \
+          --build-arg ROLEDEF_INCLUSION="$ROLEDEF_INCLUSION" \
+          --build-arg DEPLOYMENT_CREDENTIALS_INCLUSION="$DEPLOYMENT_CREDENTIALS_INCLUSION" \
+          --build-arg DATAPREP_TOKEN_INCLUSION="$DATAPREP_TOKEN_INCLUSION" \
+          --push \
+          .
