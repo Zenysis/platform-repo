@@ -15,6 +15,17 @@ inputs:
 runs:
   using: composite
   steps:
+      - name: Git clone the repository
+        uses: actions/checkout@v3
+
+      - name: Extract branch name
+        id: extract-branch
+        shell: bash
+        run: |
+          source .github/scripts/utils.sh
+          BRANCH_NAME=$(sanitize_branch_name "${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}")
+          echo "sanitized_branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+
     - name: Configure aws credentials
       uses: aws-actions/configure-aws-credentials@v4.2.1
       with:
@@ -34,7 +45,7 @@ runs:
       env:
         REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         PIPELINE_COMMON_REPOSITORY: etl-pipeline-common
-        IMAGE_TAG: ${{ inputs.image_tag }}
+        IMAGE_TAG: ${{ steps.extract-branch.outputs.sanitized_branch }}
       run: |
         set -x
         set -a
