@@ -22,8 +22,7 @@ runs:
       id: extract-branch
       shell: bash
       run: |
-        source .github/actions/scripts/utils.sh
-        BRANCH_NAME=$(sanitize_branch_name "${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}")
+        BRANCH_NAME=$(echo "${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" | sed -E 's#/#__#g; s#[^a-zA-Z0-9._-]#-#g')
         echo "sanitized_branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
 
     - name: Configure aws credentials
