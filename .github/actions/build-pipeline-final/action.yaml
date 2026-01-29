@@ -11,6 +11,9 @@ inputs:
   aws_role:
     description: IAM role ARN to assume
     required: true
+  main_repo_branch:
+    description: Branch to use in main repo to base this image upon
+    required: false
 
 runs:
   using: composite
@@ -51,13 +54,18 @@ runs:
         source docker/pipeline/build_env/${{ inputs.integration }}.env
         set +a
 
+        TAG="${{ inputs.main_repo_branch }}"
+        if [ -z "$TAG" ]; then
+          TAG="$IMAGE_TAG"
+        fi
+
         docker buildx build \
           --tag "$REGISTRY/$PIPELINE_REPOSITORY:$IMAGE_TAG" \
           -f ${{ github.action_path }}/Dockerfile.final \
           --cache-from type=registry,ref="$REGISTRY/$PIPELINE_REPOSITORY:$IMAGE_TAG" \
           --cache-from type=registry,ref="$REGISTRY/$PIPELINE_REPOSITORY:master" \
           --build-arg BASE_IMAGE=$REGISTRY/$PIPELINE_COMMON_REPOSITORY \
-          --build-arg TAG=$IMAGE_TAG \
+          --build-arg TAG="$TAG" \
           --build-arg PIPELINE_INCLUSION="$PIPELINE_INCLUSION" \
           --build-arg PIPELINE_TARGET="$PIPELINE_TARGET" \
           --build-arg CONFIG_INCLUSION="$CONFIG_INCLUSION" \
