@@ -56,7 +56,7 @@ runs:
           # Stage files into the directory layout the Dockerfile expects
           mkdir -p prod/dataprep prod/roledefs scripts/cli_util/deployment_credentials
           cp dataprep_token prod/dataprep/dataprep_token
-          cp roldef.py "prod/roledefs/${ROLEDEF_TARGET}.py"
+          cp roledef.py "prod/roledefs/${ROLEDEF_TARGET}.py"
           cp deployment_credential.py "scripts/cli_util/deployment_credentials/${DEPLOYMENT_CREDENTIALS_TARGET}.py"
           # Set inclusion vars for Dockerfile build args
           DATAPREP_TOKEN_INCLUSION=dataprep_token
