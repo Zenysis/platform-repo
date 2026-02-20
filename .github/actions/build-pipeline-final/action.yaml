@@ -60,10 +60,13 @@ runs:
           cp deployment_credential.py "scripts/cli_util/deployment_credentials/${DEPLOYMENT_CREDENTIALS_TARGET}.py"
           # Set inclusion vars for Dockerfile build args
           PIPELINE_INCLUSION=pipeline
+          PIPELINE_TARGET="pipeline/$PIPELINE_TARGET"
           CONFIG_INCLUSION=config
+          CONFIG_TARGET="config/$ZEN_ENV"
           DATAPREP_TOKEN_INCLUSION=dataprep_token
           ROLEDEF_INCLUSION="$ROLEDEF_TARGET"
           DEPLOYMENT_CREDENTIALS_INCLUSION="$DEPLOYMENT_CREDENTIALS_TARGET"
+          DEPLOYMENT_CREDENTIALS_TARGET=$ZEN_ENV
         else
           source docker/pipeline/build_env/${{ inputs.integration }}.env
         fi
