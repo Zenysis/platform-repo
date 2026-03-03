@@ -12,6 +12,8 @@ This repository contains reusable GitHub Actions that are referenced by both the
 
 A deployment repository contains all the code and configuration specific to a single deployment (country/region). It is kept separate from the main Zenysis codebase so that client contributors can work on deployment-specific changes without access to the full platform.
 
+To create a new deployment repository, see [bootstrap.md](bootstrap.md).
+
 ### What lives in a deployment repo
 
 ```

@@ -1,0 +1,38 @@
+---
+# Copy this file to .github/workflows/aws-image-build-pipeline.yml in your
+# deployment repo. Update the aws_role to match the IAM role created for
+# your deployment's ECR access.
+name: AWS Docker Image Publish Pipeline
+on:
+  workflow_dispatch:
+    inputs:
+      main_repo_branch:
+        default: master
+        description: Branch to use in main repo to base this image upon
+        required: true
+        type: string
+  push:
+    branches:
+      - 'master'
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-final:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git clone the repository
+        uses: actions/checkout@v3
+
+      - name: Build final image
+        uses: Zenysis/platform-repo/.github/actions/build-pipeline-final@main
+        with:
+          image_tag: ${{ needs.build-base.outputs.image_tag }}
+          aws_role: arn:aws:iam::251860034030:role/TODO  # Replace with your IAM role ARN
+          main_repo_branch: ${{ inputs.main_repo_branch }}
