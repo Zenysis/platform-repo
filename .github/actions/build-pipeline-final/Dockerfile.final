@@ -31,3 +31,9 @@ ENV PYTHONPATH=/zenysis
 ENV ZEN_HOST_PLATFORM=AWS-CLOUD
 
 USER zenysis
+
+# Deployment-specific build metadata (platform labels are inherited from common image)
+ARG DEPLOYMENT_REPO_URL=""
+ARG DEPLOYMENT_COMMIT_SHA=""
+LABEL org.zenysis.deployment.repo-url="${DEPLOYMENT_REPO_URL}" \
+      org.zenysis.deployment.commit-sha="${DEPLOYMENT_COMMIT_SHA}"
