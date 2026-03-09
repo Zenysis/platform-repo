@@ -109,6 +109,7 @@ All built images carry traceability labels, inspectable via `docker inspect`:
 | `org.zenysis.platform.branch` | Common image | Main repo branch name |
 | `org.zenysis.build.timestamp` | Common image | Build time (ISO 8601) |
 | `org.zenysis.deployment.repo-url` | Final image | Deployment repo URL (if applicable) |
+| `org.zenysis.deployment.branch`   | Final image | Deployment repo branch name         |
 | `org.zenysis.deployment.commit-sha` | Final image | Deployment repo commit SHA (if applicable) |
 
 Platform labels are set on the common images and inherited by final images via `FROM`. Deployment labels are set only on the final images.
