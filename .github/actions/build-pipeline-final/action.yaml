@@ -70,10 +70,12 @@ runs:
           # Capture deployment repo metadata
           DEPLOYMENT_COMMIT_SHA=$(git rev-parse HEAD)
           DEPLOYMENT_REPO_URL=$(git remote get-url origin 2>/dev/null || echo "")
+          DEPLOYMENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
         else
           source docker/pipeline/build_env/${{ inputs.integration }}.env
           DEPLOYMENT_COMMIT_SHA=""
           DEPLOYMENT_REPO_URL=""
+          DEPLOYMENT_BRANCH=""
         fi
         set +a
 
@@ -98,5 +100,6 @@ runs:
           --build-arg DATAPREP_TOKEN_INCLUSION="$DATAPREP_TOKEN_INCLUSION" \
           --build-arg DEPLOYMENT_REPO_URL="$DEPLOYMENT_REPO_URL" \
           --build-arg DEPLOYMENT_COMMIT_SHA="$DEPLOYMENT_COMMIT_SHA" \
+          --build-arg DEPLOYMENT_BRANCH="$DEPLOYMENT_BRANCH" \
           --push \
           .
