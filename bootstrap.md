@@ -56,7 +56,6 @@ PIPELINE_REPOSITORY="etl-pipeline-{env}"
 ZEN_ENV="{env}"
 PIPELINE_TARGET="{env_name}"          # e.g. "rwanda" — maps to pipeline/{env_name}/ in the repo
 ROLEDEF_TARGET="{env}_internal"
-DEPLOYMENT_CREDENTIALS_TARGET="{env}"
 ```
 
 ### `web.env`
