@@ -57,7 +57,6 @@ runs:
           mkdir -p prod/dataprep prod/roledefs scripts/cli_util/deployment_credentials
           cp dataprep_token prod/dataprep/dataprep_token
           cp roledef.py "prod/roledefs/${ROLEDEF_TARGET}.py"
-          cp deployment_credential.py "scripts/cli_util/deployment_credentials/${DEPLOYMENT_CREDENTIALS_TARGET}.py"
           # Set inclusion vars for Dockerfile build args
           PIPELINE_INCLUSION=pipeline
           PIPELINE_TARGET="pipeline/$PIPELINE_TARGET"
@@ -65,8 +64,6 @@ runs:
           CONFIG_TARGET="config/$ZEN_ENV"
           DATAPREP_TOKEN_INCLUSION=dataprep_token
           ROLEDEF_INCLUSION="$ROLEDEF_TARGET"
-          DEPLOYMENT_CREDENTIALS_INCLUSION="$DEPLOYMENT_CREDENTIALS_TARGET"
-          DEPLOYMENT_CREDENTIALS_TARGET=$ZEN_ENV
         else
           source docker/pipeline/build_env/${{ inputs.integration }}.env
         fi
@@ -89,7 +86,6 @@ runs:
           --build-arg CONFIG_INCLUSION="$CONFIG_INCLUSION" \
           --build-arg CONFIG_TARGET="$CONFIG_TARGET" \
           --build-arg ROLEDEF_INCLUSION="$ROLEDEF_INCLUSION" \
-          --build-arg DEPLOYMENT_CREDENTIALS_INCLUSION="$DEPLOYMENT_CREDENTIALS_INCLUSION" \
           --build-arg DATAPREP_TOKEN_INCLUSION="$DATAPREP_TOKEN_INCLUSION" \
           --push \
           .
