@@ -22,7 +22,6 @@ COPY ${PIPELINE_INCLUSION} ${PIPELINE_TARGET}
 COPY ${CONFIG_INCLUSION} ${CONFIG_TARGET}
 COPY prod/dataprep/${DATAPREP_TOKEN_INCLUSION} prod/dataprep/
 COPY prod/roledefs/${ROLEDEF_INCLUSION}.py prod/roledefs/
-COPY scripts/cli_util/deployment_credentials/${DEPLOYMENT_CREDENTIALS_INCLUSION}.py scripts/cli_util/deployment_credentials/
 
 ENV ZEN_PROD=1
 ENV ZEN_HOME=/zenysis
