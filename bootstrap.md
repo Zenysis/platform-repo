@@ -208,7 +208,7 @@ Permission policy (replace `etl-pipeline-rw` with your ECR repository name):
             "Resource": "arn:aws:ecr:us-east-1:251860034030:repository/etl-pipeline-{env}"
         },
         {
-            "Sid": "ECRDeletePipelineImage",
+            "Sid": "ECRDeleteImage",
             "Effect": "Allow",
             "Action": [
                 "ecr:BatchDeleteImage"
