@@ -83,6 +83,8 @@ etl-pipeline-base  →  etl-pipeline-common  →  etl-pipeline-{env}
 2. That workflow calls the `build-pipeline-final` action from this platform-repo.
 3. The action detects `pipeline.env`, sources it, and builds the final `etl-pipeline-{env}` image on top of the latest `etl-pipeline-common`.
 
+When a deployment workflow sets `main_repo_branch`, the shared action sanitizes that branch name into the Docker tag format used by the main repo before resolving `etl-pipeline-common:<tag>`. This keeps slash-delimited Git branch names compatible with image references.
+
 ### Web images (AWS CodeBuild)
 
 Web images are built via `buildspec.yml` in the main repo. When `DEPLOYMENT_REPO_URL` is set in the CodeBuild environment:
