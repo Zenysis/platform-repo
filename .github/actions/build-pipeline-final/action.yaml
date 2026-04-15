@@ -3,7 +3,7 @@ description: Builds and pushes the final pipeline Docker image for an integratio
 
 inputs:
   integration:
-    description: (Optional) Integration to build (e.g. default, mz, rw). Required only when pipeline.env is absent.
+    description: Integration to build (e.g. default, mz, rw). Not required to build images that have their own repos.
     required: false
   image_tag:
     description: Docker image tag
