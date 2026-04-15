@@ -12,7 +12,7 @@ inputs:
     description: IAM role ARN to assume
     required: true
   main_repo_branch:
-    description: Branch to use in main repo to base this image upon
+    description: Branch or Docker tag to use in the main repo for the shared base image
     required: false
 
 runs:
@@ -25,8 +25,27 @@ runs:
       id: extract-branch
       shell: bash
       run: |
-        BRANCH_NAME=$(echo "${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" | sed -E 's#/#__#g; s#[^a-zA-Z0-9._-]#-#g')
+        source "$GITHUB_ACTION_PATH/utils.sh"
+        BRANCH_NAME=$(sanitize_branch_name "${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}")
         echo "sanitized_branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+
+    - name: Resolve main repo image tag
+      id: resolve-main-repo-tag
+      shell: bash
+      env:
+        DEFAULT_IMAGE_TAG: ${{ steps.extract-branch.outputs.sanitized_branch }}
+        MAIN_REPO_BRANCH: ${{ inputs.main_repo_branch }}
+      run: |
+        source "$GITHUB_ACTION_PATH/utils.sh"
+
+        TAG="$MAIN_REPO_BRANCH"
+        if [ -n "$TAG" ]; then
+          TAG=$(sanitize_branch_name "$TAG")
+        else
+          TAG="$DEFAULT_IMAGE_TAG"
+        fi
+
+        echo "main_repo_tag=${TAG}" >> "$GITHUB_OUTPUT"
 
     - name: Configure aws credentials
       uses: aws-actions/configure-aws-credentials@v4.2.1
@@ -76,18 +95,13 @@ runs:
         fi
         set +a
 
-        TAG="${{ inputs.main_repo_branch }}"
-        if [ -z "$TAG" ]; then
-          TAG="$IMAGE_TAG"
-        fi
-
         docker buildx build \
           --tag "$REGISTRY/$PIPELINE_REPOSITORY:$IMAGE_TAG" \
           -f ${{ github.action_path }}/Dockerfile.final \
           --cache-from type=registry,ref="$REGISTRY/$PIPELINE_REPOSITORY:$IMAGE_TAG" \
           --cache-from type=registry,ref="$REGISTRY/$PIPELINE_REPOSITORY:master" \
           --build-arg BASE_IMAGE=$REGISTRY/$PIPELINE_COMMON_REPOSITORY \
-          --build-arg TAG="$TAG" \
+          --build-arg TAG="${{ steps.resolve-main-repo-tag.outputs.main_repo_tag }}" \
           --build-arg PIPELINE_INCLUSION="$PIPELINE_INCLUSION" \
           --build-arg PIPELINE_TARGET="$PIPELINE_TARGET" \
           --build-arg CONFIG_INCLUSION="$CONFIG_INCLUSION" \
