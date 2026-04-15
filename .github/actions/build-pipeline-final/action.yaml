@@ -3,8 +3,8 @@ description: Builds and pushes the final pipeline Docker image for an integratio
 
 inputs:
   integration:
-    description: Integration to build (e.g. default, mz, rw)
-    required: true
+    description: (Optional) Integration to build (e.g. default, mz, rw). Required only when pipeline.env is absent.
+    required: false
   image_tag:
     description: Docker image tag
     required: true
@@ -61,9 +61,10 @@ runs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Build final image for ${{ inputs.integration }}
+    - name: Build final image
       shell: bash
       env:
+        INTEGRATION: ${{ inputs.integration }}
         REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         PIPELINE_COMMON_REPOSITORY: etl-pipeline-common
         IMAGE_TAG: ${{ steps.extract-branch.outputs.sanitized_branch }}
@@ -87,11 +88,20 @@ runs:
           DEPLOYMENT_COMMIT_SHA=$(git rev-parse HEAD)
           DEPLOYMENT_REPO_URL=$(git remote get-url origin 2>/dev/null || echo "")
           DEPLOYMENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-        else
-          source docker/pipeline/build_env/${{ inputs.integration }}.env
+        elif [ -n "$INTEGRATION" ]; then
+          BUILD_ENV_FILE="docker/pipeline/build_env/${INTEGRATION}.env"
+          if [ ! -f "$BUILD_ENV_FILE" ]; then
+            echo "::error::Build environment file '$BUILD_ENV_FILE' not found."
+            exit 1
+          fi
+          source "$BUILD_ENV_FILE"
           DEPLOYMENT_COMMIT_SHA=""
           DEPLOYMENT_REPO_URL=""
           DEPLOYMENT_BRANCH=""
+        else
+          echo "::warning::No pipeline.env found, so the action cannot infer deployment settings automatically."
+          echo "::error::Set the optional 'integration' input when calling this action without a pipeline.env file."
+          exit 1
         fi
         set +a
 
