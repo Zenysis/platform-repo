@@ -24,7 +24,6 @@ zen-dep-{env}/
 ├── web.env                             # Web build config (ZEN_ENV, image name, roledef target)
 ├── roledef.py                          # Machine topology and service definitions
 ├── deployment_credential.py            # Credential mappings
-├── dataprep_token                      # Dataprep access token (blank if not used)
 ├── config/                             # Deployment-specific platform configuration
 │   ├── aggregation.py                  # (use `scripts/create_deployment_config.sh` from
 │   ├── druid.py                        #  the main repo to generate)

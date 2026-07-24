@@ -31,7 +31,6 @@ zen-dep-{env}/
 ├── web.env
 ├── roledef.py
 ├── deployment_credential.py
-├── dataprep_token
 ├── config/
 │   └── (files from step 2)
 └── pipeline/
@@ -88,10 +87,6 @@ DEPLOYMENT_CREDENTIALS_MAP = {
     '{env}-internal-web-staging': <credential_id>,
 }
 ```
-
-### `dataprep_token`
-
-A plain text file containing the dataprep access token for this deployment. Leave empty if not used.
 
 ### `config/`
 
@@ -249,7 +244,7 @@ The `buildspec.yml` in the main repo handles cloning the deployment repo, sourci
 ## Checklist
 
 - [ ] GitHub repo `zen-dep-{env}` created and GitHub App installed
-- [ ] `pipeline.env`, `web.env`, `roledef.py`, `deployment_credential.py`, `dataprep_token` committed
+- [ ] `pipeline.env`, `web.env`, `roledef.py`, `deployment_credential.py` committed
 - [ ] `config/` populated (from `create_deployment_config.sh` or manually)
 - [ ] `pipeline/` populated (from `create_deployment_pipeline.sh` or manually)
 - [ ] `.github/workflows/aws-image-build-pipeline.yml` committed with correct IAM role
