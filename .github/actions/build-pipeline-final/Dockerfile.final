@@ -11,8 +11,6 @@ ARG PIPELINE_TARGET=pipeline/
 # Default to copying the entire config folder.
 ARG CONFIG_INCLUSION=config
 ARG CONFIG_TARGET=config/
-# Default to copying the dataprep token
-ARG DATAPREP_TOKEN_INCLUSION=token
 # Default to copying all python files in the prod/roledefs folder.
 ARG ROLEDEF_INCLUSION=*
 # Default to copying all files in the scripts/cli_util/deployment_credentials folder.
@@ -20,7 +18,6 @@ ARG DEPLOYMENT_CREDENTIALS_INCLUSION=*
 
 COPY ${PIPELINE_INCLUSION} ${PIPELINE_TARGET}
 COPY ${CONFIG_INCLUSION} ${CONFIG_TARGET}
-COPY prod/dataprep/${DATAPREP_TOKEN_INCLUSION} prod/dataprep/
 COPY prod/roledefs/${ROLEDEF_INCLUSION}.py prod/roledefs/
 
 ENV ZEN_PROD=1

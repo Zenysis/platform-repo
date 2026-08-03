@@ -74,15 +74,13 @@ runs:
         if [ -f pipeline.env ]; then
           source pipeline.env
           # Stage files into the directory layout the Dockerfile expects
-          mkdir -p prod/dataprep prod/roledefs scripts/cli_util/deployment_credentials
-          cp dataprep_token prod/dataprep/dataprep_token
+          mkdir -p prod/roledefs scripts/cli_util/deployment_credentials
           cp roledef.py "prod/roledefs/${ROLEDEF_TARGET}.py"
           # Set inclusion vars for Dockerfile build args
           PIPELINE_INCLUSION=pipeline
           PIPELINE_TARGET="pipeline/$PIPELINE_TARGET"
           CONFIG_INCLUSION=config
           CONFIG_TARGET="config/$ZEN_ENV"
-          DATAPREP_TOKEN_INCLUSION=dataprep_token
           ROLEDEF_INCLUSION="$ROLEDEF_TARGET"
           # Capture deployment repo metadata
           DEPLOYMENT_COMMIT_SHA=$(git rev-parse HEAD)
@@ -117,7 +115,6 @@ runs:
           --build-arg CONFIG_INCLUSION="$CONFIG_INCLUSION" \
           --build-arg CONFIG_TARGET="$CONFIG_TARGET" \
           --build-arg ROLEDEF_INCLUSION="$ROLEDEF_INCLUSION" \
-          --build-arg DATAPREP_TOKEN_INCLUSION="$DATAPREP_TOKEN_INCLUSION" \
           --build-arg DEPLOYMENT_REPO_URL="$DEPLOYMENT_REPO_URL" \
           --build-arg DEPLOYMENT_COMMIT_SHA="$DEPLOYMENT_COMMIT_SHA" \
           --build-arg DEPLOYMENT_BRANCH="$DEPLOYMENT_BRANCH" \
