@@ -4,9 +4,13 @@ Shared GitHub Actions for building Zenysis Docker images across the main reposit
 
 ## What lives here
 
-This repository contains reusable GitHub Actions that are referenced by both the [main Zenysis repository](https://github.com/Zenysis/zenysis) and individual deployment repositories (e.g. `zen-dep-rw`). Currently:
+This repository contains reusable GitHub Actions and workflows that are referenced by both the [main Zenysis repository](https://github.com/Zenysis/zenysis) and individual deployment repositories (e.g. `zen-dep-rw`). Currently:
 
-- **`.github/actions/build-pipeline-final`** — Builds the final pipeline Docker image for a given integration. It layers deployment-specific code (pipeline scripts, config, role definitions, credentials) on top of the shared `etl-pipeline-common` base image.
+- **`.github/actions/build-pipeline-final`** — Builds the final pipeline Docker image for a given integration. It layers deployment-specific code (pipeline scripts, config, role definitions, credentials) on top of the shared `etl-pipeline-common` base image. The calling workflow must check out its repository first.
+- **`.github/actions/sanitize-branch`** — Derives a Docker-tag-safe name from the current branch. Used by anything that tags images by branch.
+- **`.github/workflows/ecr-cleanup.yml`** — Reusable workflow (`workflow_call`) that deletes the images a branch produced once its PR closes. The build-config layout is passed as inputs, so the same workflow serves the main repo and the deployment repos.
+
+Callers reference these at `@main`, so a change here reaches every repo on its next run. That is the point — it is what stops the copies drifting apart again — but it also means a breaking change lands everywhere at once. Verify against one repo before merging.
 
 ## Deployment repositories
 
