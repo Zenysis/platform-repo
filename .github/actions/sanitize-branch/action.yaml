@@ -1,0 +1,31 @@
+name: Sanitize Branch Name
+description: >
+  Derives a Docker-tag-safe name from the current branch. Every repo that tags
+  images by branch needs this, so it lives here rather than as a per-repo copy
+  of utils.sh.
+
+inputs:
+  branch:
+    description: Branch to sanitize. Defaults to the branch the workflow is running on.
+    required: false
+
+outputs:
+  sanitized_branch:
+    description: The branch name with '/' replaced by '__' and Docker-illegal characters replaced by '-'.
+    value: ${{ steps.sanitize.outputs.sanitized_branch }}
+
+runs:
+  using: composite
+  steps:
+    - name: Sanitize branch name
+      id: sanitize
+      shell: bash
+      env:
+        INPUT_BRANCH: ${{ inputs.branch }}
+      run: |
+        branch="${INPUT_BRANCH:-${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}}"
+        # - Replace '/' with '__' to preserve hierarchy
+        # - Remove characters illegal in Docker tags
+        # - Preserves case and allows a-z, A-Z, 0-9, ., _, -
+        sanitized=$(echo "$branch" | sed -E 's#/#__#g; s#[^a-zA-Z0-9._-]#-#g')
+        echo "sanitized_branch=${sanitized}" >> "$GITHUB_OUTPUT"
