@@ -10,7 +10,7 @@ This repository contains reusable GitHub Actions and workflows that are referenc
 - **`.github/actions/sanitize-branch`** — Derives a Docker-tag-safe name from the current branch. Used by anything that tags images by branch.
 - **`.github/workflows/ecr-cleanup.yml`** — Reusable workflow (`workflow_call`) that deletes the images a branch produced once its PR closes. The build-config layout is passed as inputs, so the same workflow serves the main repo and the deployment repos.
 
-Callers reference these at `@main`, so a change here reaches every repo on its next run. That is the point — it is what stops the copies drifting apart again — but it also means a breaking change lands everywhere at once. Verify against one repo before merging.
+Callers reference these at `@main`, so a change here reaches every repo on its next run. That is the point — it is what stops the copies drifting apart again — but it also means a breaking change lands everywhere at once.
 
 ## Deployment repositories
 
