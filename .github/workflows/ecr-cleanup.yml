@@ -1,4 +1,3 @@
----
 # Deletes the container images a branch produced, once its PR closes.
 #
 # The main repo and the deployment repos lay their build config out

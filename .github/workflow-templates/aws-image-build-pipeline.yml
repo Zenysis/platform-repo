@@ -1,4 +1,3 @@
----
 # Copy this file to .github/workflows/aws-image-build-pipeline.yml in your
 # deployment repo. Update the aws_role to match the IAM role created for
 # your deployment's ECR access.
