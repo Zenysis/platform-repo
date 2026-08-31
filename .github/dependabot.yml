@@ -1,0 +1,18 @@
+version: 2
+updates:
+  # Action versions drift silently: nothing fails until a runner drops
+  # support for an old runtime, by which point the bump is urgent.
+  - package-ecosystem: github-actions
+    directories:
+      # "/" covers .github/workflows. Composite actions live in their own
+      # directories and are not picked up by it, so match them explicitly --
+      # the glob keeps new ones covered without editing this file.
+      - '/'
+      - '/.github/actions/*'
+    schedule:
+      interval: monthly
+    groups:
+      # One PR a month rather than one per action.
+      actions:
+        patterns:
+          - '*'
