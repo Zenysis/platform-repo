@@ -31,7 +31,7 @@ runs:
         branch: ${{ inputs.main_repo_branch || steps.extract-branch.outputs.sanitized_branch }}
 
     - name: Configure aws credentials
-      uses: aws-actions/configure-aws-credentials@v4.2.1
+      uses: aws-actions/configure-aws-credentials@v6.2.4
       with:
         role-to-assume: ${{ inputs.aws_role }}
         role-session-name: GitHub_AWS_via_FederatedOIDC
@@ -42,7 +42,7 @@ runs:
       uses: aws-actions/amazon-ecr-login@v2
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
 
     - name: Build final image
       shell: bash
