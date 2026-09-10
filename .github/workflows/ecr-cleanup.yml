@@ -1,0 +1,130 @@
+# Deletes the container images a branch produced, once its PR closes.
+#
+# The main repo and the deployment repos lay their build config out
+# differently, so the paths are inputs rather than assumptions. Callers must
+# grant `id-token: write` (AWS OIDC) and `contents: read`; a reusable workflow
+# can only narrow the caller's permissions, never widen them.
+#
+# Example caller:
+#
+#   jobs:
+#     cleanup:
+#       uses: Zenysis/platform-repo/.github/workflows/ecr-cleanup.yml@main
+#       with:
+#         aws_role: arn:aws:iam::251860034030:role/GitHubAction-AssumeRoleWithAction-rw
+name: ECR Cleanup
+
+on:
+  workflow_call:
+    inputs:
+      aws_role:
+        description: IAM role ARN to assume. Use the role scoped to this deployment, not the platform-wide one.
+        required: true
+        type: string
+      aws_region:
+        description: AWS region holding the ECR repositories.
+        required: false
+        default: us-east-1
+        type: string
+      pipeline_env_glob:
+        description: >
+          Glob matching the pipeline build env files to read PIPELINE_REPOSITORY from.
+          Deployment repos keep a single pipeline.env at the root; the main repo has one per integration.
+        required: false
+        default: pipeline.env
+        type: string
+      web_env_glob:
+        description: >
+          Glob matching the web build env files to read WEB_NAME from.
+          Pass an empty string for repos that build no web images.
+        required: false
+        default: web.env
+        type: string
+      shared_repositories:
+        description: >
+          Space-separated ECR repositories shared across all deployments. Only the main
+          platform repo should set this -- a deployment repo must never delete shared images.
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      # Under workflow_call the github context is the caller's, so this checks
+      # out the calling repository and its build env files.
+      - name: Git clone the repository
+        uses: actions/checkout@v4
+
+      - name: Extract branch name
+        id: extract-branch
+        uses: Zenysis/platform-repo/.github/actions/sanitize-branch@main
+
+      - name: Configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4.2.1
+        with:
+          role-to-assume: ${{ inputs.aws_role }}
+          role-session-name: GitHub_AWS_via_FederatedOIDC
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Remove shared container images from AWS ECR
+        if: inputs.shared_repositories != ''
+        env:
+          IMAGE_TAG: ${{ steps.extract-branch.outputs.sanitized_branch }}
+          SHARED_REPOSITORIES: ${{ inputs.shared_repositories }}
+        run: |
+          for repository in $SHARED_REPOSITORIES; do
+            aws ecr batch-delete-image --no-cli-pager \
+              --repository-name "$repository" --image-ids imageTag="$IMAGE_TAG"
+          done
+
+      - name: Remove pipeline container images from AWS ECR
+        if: inputs.pipeline_env_glob != ''
+        env:
+          IMAGE_TAG: ${{ steps.extract-branch.outputs.sanitized_branch }}
+          PIPELINE_ENV_GLOB: ${{ inputs.pipeline_env_glob }}
+        run: |
+          shopt -s nullglob
+          # The glob is deliberately unquoted so the shell expands it.
+          for env_file in $PIPELINE_ENV_GLOB; do
+            # Unset first: sourcing in a loop otherwise carries a value over
+            # from the previous file when one doesn't define it.
+            unset PIPELINE_REPOSITORY
+            set -a
+            source "$env_file"
+            set +a
+            if [ -z "${PIPELINE_REPOSITORY:-}" ]; then
+              echo "::warning::$env_file defines no PIPELINE_REPOSITORY, skipping"
+              continue
+            fi
+            echo "Deleting $PIPELINE_REPOSITORY:$IMAGE_TAG"
+            aws ecr batch-delete-image --no-cli-pager \
+              --repository-name "$PIPELINE_REPOSITORY" --image-ids imageTag="$IMAGE_TAG"
+          done
+
+      - name: Remove web container images from AWS ECR
+        if: inputs.web_env_glob != ''
+        env:
+          IMAGE_TAG: ${{ steps.extract-branch.outputs.sanitized_branch }}
+          WEB_ENV_GLOB: ${{ inputs.web_env_glob }}
+        run: |
+          shopt -s nullglob
+          # The glob is deliberately unquoted so the shell expands it.
+          for env_file in $WEB_ENV_GLOB; do
+            unset WEB_NAME
+            set -a
+            source "$env_file"
+            set +a
+            if [ -z "${WEB_NAME:-}" ]; then
+              echo "::warning::$env_file defines no WEB_NAME, skipping"
+              continue
+            fi
+            echo "Deleting $WEB_NAME:$IMAGE_TAG"
+            aws ecr batch-delete-image --no-cli-pager \
+              --repository-name "$WEB_NAME" --image-ids imageTag="$IMAGE_TAG"
+          done

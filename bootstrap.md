@@ -26,7 +26,8 @@ Copy the generated files and create the required root files:
 ```
 zen-dep-{env}/
 ├── .github/workflows/
-│   └── aws-image-build-pipeline.yml
+│   ├── aws-image-build-pipeline.yml
+│   └── cleanup.yml
 ├── pipeline.env
 ├── web.env
 ├── roledef.py
@@ -37,16 +38,27 @@ zen-dep-{env}/
     └── (files from step 2)
 ```
 
-### `.github/workflows/aws-image-build-pipeline.yml`
+### `.github/workflows/`
 
-Copy the template from this repo and update the `aws_role` to match the IAM role created in step 5:
+Copy both templates from this repo:
 
 ```bash
 mkdir -p .github/workflows
 cp platform-repo/.github/workflow-templates/aws-image-build-pipeline.yml .github/workflows/
+cp platform-repo/.github/workflow-templates/cleanup.yml .github/workflows/
 ```
 
-Edit the file and replace the `aws_role` value with your deployment's IAM role ARN.
+In each, replace the `aws_role` value with the IAM role ARN created in step 5 — the
+one scoped to this deployment, `GitHubAction-AssumeRoleWithAction-{env}`. Using the
+platform-wide role instead would let this repo delete images belonging to other
+deployments.
+
+Both templates are thin callers of shared workflows in this repo, so fixes and
+improvements reach every deployment without another round of copy-paste. Keep them
+that way: deployment-specific values belong in the `with:` block, not in new steps.
+
+`cleanup.yml` deletes the images a branch produced once its PR closes. Leave
+`shared_repositories` unset — that input belongs to the main platform repo alone.
 
 ### `pipeline.env`
 
@@ -248,6 +260,7 @@ The `buildspec.yml` in the main repo handles cloning the deployment repo, sourci
 - [ ] `config/` populated (from `create_deployment_config.sh` or manually)
 - [ ] `pipeline/` populated (from `create_deployment_pipeline.sh` or manually)
 - [ ] `.github/workflows/aws-image-build-pipeline.yml` committed with correct IAM role
+- [ ] `.github/workflows/cleanup.yml` committed with the same IAM role, and no `shared_repositories`
 - [ ] ECR repositories `etl-pipeline-{env}` and `web-{env}` created
 - [ ] IAM role `GitHubAction-AssumeRoleWithAction-{env}` created with OIDC trust
 - [ ] `docker/pipeline/build_env/{env}.env` added to main repo

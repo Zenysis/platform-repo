@@ -1,13 +1,13 @@
 name: Build Pipeline Final Image
-description: Builds and pushes the final pipeline Docker image for an integration
+description: >
+  Builds and pushes the final pipeline Docker image for an integration.
+  The calling workflow must check out its repository first -- this action
+  reads pipeline.env, roledef.py and config/ from the workspace.
 
 inputs:
   integration:
     description: Integration to build (e.g. default, mz, rw). Not required to build images that have their own repos.
     required: false
-  image_tag:
-    description: Docker image tag
-    required: true
   aws_role:
     description: IAM role ARN to assume
     required: true
@@ -18,34 +18,17 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Git clone the repository
-      uses: actions/checkout@v3
-
     - name: Extract branch name
       id: extract-branch
-      shell: bash
-      run: |
-        source "$GITHUB_ACTION_PATH/utils.sh"
-        BRANCH_NAME=$(sanitize_branch_name "${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}")
-        echo "sanitized_branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+      uses: Zenysis/platform-repo/.github/actions/sanitize-branch@main
 
+    # Falls back to this repo's own branch when no main repo branch was requested.
+    # Sanitizing is idempotent, so the already-sanitized fallback passes through unchanged.
     - name: Resolve main repo image tag
       id: resolve-main-repo-tag
-      shell: bash
-      env:
-        DEFAULT_IMAGE_TAG: ${{ steps.extract-branch.outputs.sanitized_branch }}
-        MAIN_REPO_BRANCH: ${{ inputs.main_repo_branch }}
-      run: |
-        source "$GITHUB_ACTION_PATH/utils.sh"
-
-        TAG="$MAIN_REPO_BRANCH"
-        if [ -n "$TAG" ]; then
-          TAG=$(sanitize_branch_name "$TAG")
-        else
-          TAG="$DEFAULT_IMAGE_TAG"
-        fi
-
-        echo "main_repo_tag=${TAG}" >> "$GITHUB_OUTPUT"
+      uses: Zenysis/platform-repo/.github/actions/sanitize-branch@main
+      with:
+        branch: ${{ inputs.main_repo_branch || steps.extract-branch.outputs.sanitized_branch }}
 
     - name: Configure aws credentials
       uses: aws-actions/configure-aws-credentials@v4.2.1
@@ -109,7 +92,7 @@ runs:
           --cache-from type=registry,ref="$REGISTRY/$PIPELINE_REPOSITORY:$IMAGE_TAG" \
           --cache-from type=registry,ref="$REGISTRY/$PIPELINE_REPOSITORY:master" \
           --build-arg BASE_IMAGE=$REGISTRY/$PIPELINE_COMMON_REPOSITORY \
-          --build-arg TAG="${{ steps.resolve-main-repo-tag.outputs.main_repo_tag }}" \
+          --build-arg TAG="${{ steps.resolve-main-repo-tag.outputs.sanitized_branch }}" \
           --build-arg PIPELINE_INCLUSION="$PIPELINE_INCLUSION" \
           --build-arg PIPELINE_TARGET="$PIPELINE_TARGET" \
           --build-arg CONFIG_INCLUSION="$CONFIG_INCLUSION" \
