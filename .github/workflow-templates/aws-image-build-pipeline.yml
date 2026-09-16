@@ -29,7 +29,7 @@ jobs:
       # build-pipeline-final reads pipeline.env and roledef.py from the
       # workspace, so the checkout has to happen here.
       - name: Git clone the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Build final image
         uses: Zenysis/platform-repo/.github/actions/build-pipeline-final@main
