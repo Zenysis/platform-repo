@@ -9,6 +9,9 @@ updates:
       # the glob keeps new ones covered without editing this file.
       - '/'
       - '/.github/actions/*'
+    # Nothing covers .github/workflow-templates. Dependabot only scans live
+    # workflows and action.yml files, and those are neither, so the versions
+    # pinned in them have to be bumped by hand.
     schedule:
       interval: monthly
     groups:
