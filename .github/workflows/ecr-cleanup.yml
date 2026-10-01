@@ -55,14 +55,14 @@ jobs:
       # Under workflow_call the github context is the caller's, so this checks
       # out the calling repository and its build env files.
       - name: Git clone the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Extract branch name
         id: extract-branch
         uses: Zenysis/platform-repo/.github/actions/sanitize-branch@main
 
       - name: Configure aws credentials
-        uses: aws-actions/configure-aws-credentials@v4.2.1
+        uses: aws-actions/configure-aws-credentials@v6.3.0
         with:
           role-to-assume: ${{ inputs.aws_role }}
           role-session-name: GitHub_AWS_via_FederatedOIDC
