@@ -87,6 +87,13 @@ def call(Map config) {
           }
 
           checkout scm
+
+          // The pipeline compose ships with this library, so a job gets the
+          // version that matches the code running it, whichever repo it
+          // checked out.
+          writeFile(
+            file: 'docker-compose.pipeline.yml',
+            text: libraryResource('docker-compose.pipeline.yml'))
         }
       }
 
@@ -377,6 +384,15 @@ source .venv_dev/bin/activate
 // Get the override file for a machine
 // This override allows us to run as root user on some deployments
 def getOverrideFile(String deployment) {
+  // A deployment repo, which has a pipeline.env, keeps its override at the
+  // repo root if it has one.
+  if (fileExists('pipeline.env')) {
+    return fileExists(DEPLOYMENT_COMPOSE_OVERRIDE) ? "-f ${DEPLOYMENT_COMPOSE_OVERRIDE}" : ''
+  }
+
+  // Jobs whose Jenkinsfile is still in the main repo (rw, mz, et) have no
+  // pipeline.env. TODO: Drop this fallback, and get_docker_override_file.py,
+  // once they move to their deployment repos.
   def overrideFile = sh(script: """\
 #!/bin/bash -eu
 set -o pipefail
@@ -405,6 +421,8 @@ source .venv_dev/bin/activate
 // Constant for docker project name
 @Field def DOCKER_PROJECT_NAME = null
 @Field def INSUFFICIENT_STORAGE = 'insufficient_storage'
+// Compose override a deployment repo can keep at its root.
+@Field def DEPLOYMENT_COMPOSE_OVERRIDE = 'docker-compose.pipeline.override.yml'
 
 def getDateEnv() {
   def buildNumber = env.BUILD_NUMBER.toInteger()

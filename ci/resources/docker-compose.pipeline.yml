@@ -1,0 +1,37 @@
+services:
+  pipeline:
+    pull_policy: always
+    image: ${DOCKER_NAMESPACE:-251860034030.dkr.ecr.us-east-1.amazonaws.com}/etl-pipeline:${DOCKER_TAG-}
+    entrypoint: ['./docker/entrypoint_pipeline.sh']
+    # Having multiple pipelines runnnig on one machine will quickly use up
+    # all available subnets (16 by default), no clear error is raised and the
+    # container will have no network access. Defaulting to host networking mode
+    # which will use the host's network stack and avoid this issue.
+    network_mode: 'host'
+
+    volumes:
+      - ${DRUID_SHARED_PATH:-/home/share}:/home/share
+      - ${OUTPUT_PATH:-/home/share/out}:/zenysis/pipeline/out
+      # Zeus runs the steps with USER (which is set to zenysis in this file), so it's important
+      # that the mc_config volume is mounted /home/zenysis/.mc
+      - ${MC_CONFIG_PATH:-/home/ubuntu/.mc}:/home/zenysis/.mc
+      # When you bash into the container, and you feel like running mc, you'll be running as
+      # the root user, so we go ahead an mount the mc_config volume to /root/.mc as well.
+      - ${MC_CONFIG_PATH:-/home/ubuntu/.mc}:/root/.mc
+
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - ZEN_ENV=${ZEN_ENV}
+      - PIPELINE_ENV=${PIPELINE_ENV}
+      - DRUID_HOST=${DRUID_HOST}
+      - COMMAND=${COMMAND-echo Specify a pipeline command, e.g. "./pipeline/br/generate/zeus_generate run"}
+      - COMMAND_PATH=${COMMAND_PATH-echo Specify the pipeline command path, e.g. "pipeline/br/generate"}
+      - PIPELINE_START_TS=${PIPELINE_START_TS:-}
+      - PIPELINE_CRONTAB=${PIPELINE_CRONTAB:-}
+      - JOB_NAME=${JOB_NAME:-}
+      - DATE=${DATE}
+      # This is for scripts that run as a part of the pipeline, but aren't a
+      # part of the zeus pipeline itself.
+      - USE_PIPELINE_LOGGING=true
+      - PIPELINE_MODE=${PIPELINE_MODE}
+    user: ${PIPELINE_USER:-1000}:${PIPELINE_GROUP:-1000}
