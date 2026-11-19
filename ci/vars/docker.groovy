@@ -98,6 +98,13 @@ def call(Map config) {
       }
 
       stage('Install Dependencies') {
+        // The venv only runs the main repo's prod/dockerpipeline scripts, which
+        // a deployment repo checkout doesn't need.
+        when {
+          expression {
+            !fileExists('pipeline.env')
+          }
+        }
         steps {
           sh '''\
 #!/bin/bash -eu
@@ -302,24 +309,16 @@ FixShebangs
   }
 }
 
-// Run a docker specific fabric command and capture output
-def getOutputFromFabricCommand(String fabCommand, String machine) {
-  def machineArg = machine.contains('@') ? "-H '${machine}'" : "-R '${machine}'"
-  def storageStatus = sh(script: """\
-#!/bin/bash -eu
-set -o pipefail
-
-source .venv_dev/bin/activate
-fab --fabfile=prod/docker_fabfile.py ${machineArg} '${fabCommand}'
-""", returnStdout: true).trim()
-
-  return storageStatus
-}
-
 // get host from ZEN_ENV
 def getHostFromMachine(String machine) {
   if (machine.contains('@')) {
     return machine
+  }
+
+  // Role names are looked up in the main repo's roledefs, which a deployment
+  // repo checkout doesn't have.
+  if (fileExists('pipeline.env')) {
+    error("MACHINE must be user@host for a job checked out from a deployment repo, not '${machine}'")
   }
 
   def hostResult = sh(script: """\
@@ -420,7 +419,6 @@ source .venv_dev/bin/activate
 @Field def FAILURE = 'danger'
 // Constant for docker project name
 @Field def DOCKER_PROJECT_NAME = null
-@Field def INSUFFICIENT_STORAGE = 'insufficient_storage'
 // Compose override a deployment repo can keep at its root.
 @Field def DEPLOYMENT_COMPOSE_OVERRIDE = 'docker-compose.pipeline.override.yml'
 
@@ -594,10 +592,22 @@ def runDockerPipelineCommand(Map config, String pipelineStage, String branch,
 // If the free space is less than MIN_DISK_SPACE_PERCENT (default: 5% of total storage)
 // of the total disk space, abort the pipeline
 def checkFreeDiskSpace(Map config) {
-    command = "get_free_disk_space:$env.MIN_DISK_SPACE_PERCENT"
+    def maxUsedSpacePercent = 100 - (env.MIN_DISK_SPACE_PERCENT as Integer)
+    def dockerHost = getHostFromMachine(config.MACHINE)
 
-    def freeSpaceResult = getOutputFromFabricCommand(command, config.MACHINE)
-    if (freeSpaceResult.contains(INSUFFICIENT_STORAGE)) {
+    // Uses the same SSH access as DOCKER_HOST. Lists every real filesystem at
+    // or above the limit; awk reads "85%" as 85.
+    def lowSpaceFilesystems = sh(script: """\
+#!/bin/bash -eu
+set -o pipefail
+
+ssh -o BatchMode=yes '${dockerHost}' bash -s <<'EOF'
+df --output=pcent,target -x tmpfs -x devtmpfs -x overlay -x squashfs \\
+  | awk -v max=${maxUsedSpacePercent} 'NR > 1 && \$1 + 0 >= max { print \$2 " (" \$1 ")" }'
+EOF
+""", returnStdout: true).trim()
+    if (lowSpaceFilesystems) {
+        echo "Running out of space on ${dockerHost}:\n${lowSpaceFilesystems}"
         currentBuild.result = 'FAILURE'
         storeStatus(config, "Free Disk Space", FAILURE, ["Insufficient disk space left. Aborting pipeline run."], null)
         error("Insufficient disk space. Aborting pipeline run.")
