@@ -330,7 +330,36 @@ source .venv_dev/bin/activate
 }
 
 
+// Reads a key from pipeline.env, the file at the root of a deployment repo
+// that build-pipeline-final also sources. Returns null when the workspace has
+// no pipeline.env, which is the case for jobs still checked out from the main
+// repo.
+def getPipelineEnvValue(String key) {
+  if (!fileExists('pipeline.env')) {
+    return null
+  }
+
+  return sh(script: """\
+#!/bin/bash -eu
+set -o pipefail
+
+. ./pipeline.env
+printf '%s' "\${${key}:-}"
+""", returnStdout: true).trim()
+}
+
 def getZenBaseDir() {
+  def pipelineEnvBaseDir = getPipelineEnvValue('ZEN_BASE_DIR')
+  if (pipelineEnvBaseDir != null) {
+    if (pipelineEnvBaseDir == '') {
+      error("pipeline.env must set ZEN_BASE_DIR")
+    }
+    return pipelineEnvBaseDir
+  }
+
+  // Jobs whose Jenkinsfile is still in the main repo (rw, mz, et) have no
+  // pipeline.env. TODO: Drop this fallback, and get_zen_base_dir.py, once
+  // they move to their deployment repos.
   def zenBaseDir = sh(script: """\
 #!/bin/bash -eu
 set -o pipefail
