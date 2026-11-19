@@ -67,6 +67,7 @@ PIPELINE_REPOSITORY="etl-pipeline-{env}"
 ZEN_ENV="{env}"
 PIPELINE_TARGET="{env_name}"          # e.g. "rwanda" — maps to pipeline/{env_name}/ in the repo
 ROLEDEF_TARGET="{env}_internal"
+ZEN_BASE_DIR="/home/share"            # Jenkins: the pipeline writes to $ZEN_BASE_DIR/pipeline/out on MACHINE
 ```
 
 ### `web.env`

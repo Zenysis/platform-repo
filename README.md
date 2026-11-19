@@ -47,7 +47,7 @@ zen-dep-{env}/
 
 ### Key environment files
 
-- **`pipeline.env`** — Defines `PIPELINE_REPOSITORY`, `ZEN_ENV`, `PIPELINE_TARGET`, `ROLEDEF_TARGET`. Used by the `build-pipeline-final` action.
+- **`pipeline.env`** — Defines `PIPELINE_REPOSITORY`, `ZEN_ENV`, `PIPELINE_TARGET`, `ROLEDEF_TARGET`. Used by the `build-pipeline-final` action. Also defines `ZEN_BASE_DIR`, the directory on the pipeline machine that output goes under, for the `docker` Jenkins library.
 - **`web.env`** — Defines `WEB_NAME`, `ZEN_ENV`, `ROLEDEF_TARGET`. Used by the CodeBuild web image build.
 
 ## Branch model
