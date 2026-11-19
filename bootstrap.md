@@ -29,6 +29,7 @@ zen-dep-{env}/
 │   ├── aws-image-build-pipeline.yml
 │   └── cleanup.yml
 ├── pipeline.env
+├── docker-compose.pipeline.override.yml   # optional
 ├── web.env
 ├── roledef.py
 ├── deployment_credential.py
