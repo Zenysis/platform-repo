@@ -561,29 +561,44 @@ def runDockerCommand(Map config, String commandPath, String command,
   try {
     echo "Waiting for command to finish."
 
-    waitUntil(initialRecurrencePeriod: 15000) {
-      // Set DATABASE_URL and DRUID_HOST to empty strings to avoid docker warnings.
-      def result = sh(script: "DOCKER_API_VERSION=\"1.44\" DATABASE_URL=\"\" DRUID_HOST=\"\" PIPELINE_ENV=\"${env.PIPELINE_DEPLOYMENT_NAME}\" DOCKER_HOST=\"ssh://${dockerHost}\" docker compose -p \"${dockerProjectName}-etl\" -f docker-compose.pipeline.yml ${overrideFile} ps -a --format json", returnStdout: true).trim()
-      if (result == '') {
-        throw new Exception('Could not get docker ps result')
-      }
-      psResult = new JsonSlurperClassic().parseText(result)
-      // Possible states are: [paused | restarting | removing | running | dead | created | exited]
-      // https://docs.docker.com/reference/cli/docker/container/ls/#status
-      // The 'dead' status indicate that the container is not running, but doesn't have an exit code we can use.
-      if (psResult.State == 'dead') {
-        throw new Exception('Docker container is in `dead` state')
-      }
-      // We are only happy with the 'exited' state, indicating the command has completed.
-      if (psResult.State == 'exited') {
-        return true
-      }
-      // This makes the logs a lot more chatty, but it's useful for debugging the pipeline state.
-      echo "Docker container state: ${psResult.State} with exit code: ${psResult.ExitCode}"
-      // waitUntil sleep for a maximum of 15 seconds, we might as well sleep longer to reduce
-      // all our logging.
-      sleep(60)
-      return false
+    // Set DATABASE_URL and DRUID_HOST to empty strings to avoid docker warnings.
+    def composePs = "DOCKER_API_VERSION=\"1.44\" DATABASE_URL=\"\" DRUID_HOST=\"\" PIPELINE_ENV=\"${env.PIPELINE_DEPLOYMENT_NAME}\" DOCKER_HOST=\"ssh://${dockerHost}\" docker compose -p \"${dockerProjectName}-etl\" -f docker-compose.pipeline.yml ${overrideFile} ps -a"
+
+    // Poll from one shell step rather than a waitUntil of sh and sleep steps:
+    // each of those logs a line per cycle, which buried long runs. The
+    // shebang keeps sh from tracing every command, and the state is printed
+    // only when it changes.
+    // Possible states are: [paused | restarting | removing | running | dead | created | exited]
+    // https://docs.docker.com/reference/cli/docker/container/ls/#status
+    sh """\
+#!/bin/bash
+set -euo pipefail
+last=''
+while true; do
+  state=\$(${composePs} --format '{{.State}}')
+  if [ -z "\$state" ]; then
+    echo 'Could not get docker ps result' >&2
+    exit 1
+  fi
+  if [ "\$state" != "\$last" ]; then
+    echo "Docker container state: \$state"
+    last="\$state"
+  fi
+  case "\$state" in
+    exited|dead) break ;;
+  esac
+  sleep 60
+done
+"""
+
+    def result = sh(script: "${composePs} --format json", returnStdout: true).trim()
+    if (result == '') {
+      throw new Exception('Could not get docker ps result')
+    }
+    psResult = new JsonSlurperClassic().parseText(result)
+    // The 'dead' status indicate that the container is not running, but doesn't have an exit code we can use.
+    if (psResult.State == 'dead') {
+      throw new Exception('Docker container is in `dead` state')
     }
   } catch (Exception e) {
     echo e.toString()
