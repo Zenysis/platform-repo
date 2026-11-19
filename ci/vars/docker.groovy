@@ -1008,8 +1008,12 @@ def storeFailureStatus(Map config, String branch) {
 
 
 // Programmatically build the blue ocean URI since it isn't provided in env
+// Link to this build on whichever Jenkins is running it, built from the
+// instance's configured Jenkins URL (Manage Jenkins > System). RUN_DISPLAY_URL
+// opens Blue Ocean when it is installed and the classic page when it is not;
+// BUILD_URL covers an instance without the display-url plugin.
 def blueOceanBuildUri() {
-  return "http://jenkins.zenysis.com/blue/organizations/jenkins/${env.JOB_NAME}/detail/${env.JOB_BASE_NAME}/${env.BUILD_NUMBER}/pipeline/"
+  return env.RUN_DISPLAY_URL ?: env.BUILD_URL
 }
 
 // Run the staging pipeline setup as a docker command
