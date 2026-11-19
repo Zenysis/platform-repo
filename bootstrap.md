@@ -245,6 +245,16 @@ docker inspect etl-pipeline-{env}:master | jq '.[0].Config.Labels'
 
 4. Merge the `docker/pipeline/build_env/{env}.env` change to `master` in the main repo. Future base image rebuilds will automatically notify the deployment repo.
 
+### Jenkins agent
+
+The `docker` library logs in to ECR itself before every pull, with `aws ecr get-login-password`. The agent that runs the job needs:
+
+- AWS CLI v2.
+- An AWS identity, normally the EC2 instance role, allowed `ecr:GetAuthorizationToken`, plus `ecr:BatchGetImage` and `ecr:GetDownloadUrlForLayer` on `etl-pipeline-{env}`.
+- SSH access to `MACHINE`, which the library already uses as `DOCKER_HOST`.
+
+The agent doesn't need the ECR credential helper. The library keeps its login in the job's own `DOCKER_CONFIG` and ignores `~/.docker/config.json`.
+
 ## Step 7: Web image setup
 
 For CodeBuild to build web images for this deployment, add the following environment variables to the CodeBuild project:
@@ -267,4 +277,5 @@ The `buildspec.yml` in the main repo handles cloning the deployment repo, sourci
 - [ ] IAM role `GitHubAction-AssumeRoleWithAction-{env}` created with OIDC trust
 - [ ] `docker/pipeline/build_env/{env}.env` added to main repo
 - [ ] Pipeline image builds successfully from deployment repo
+- [ ] Jenkins agent has AWS CLI v2 and an identity that can pull `etl-pipeline-{env}`
 - [ ] Web image builds successfully from CodeBuild
