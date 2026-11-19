@@ -65,6 +65,16 @@ def call(Map config) {
 
       // Determine whether we're running a staging pipeline or a prod pipeline
       PIPELINE_MODE = "${isStagingPipeline(config) ? 'staging' : 'all'}"
+
+      // Registry the pipeline image is pulled from. The compose files default
+      // to the same value, so this only needs setting for a different one.
+      DOCKER_NAMESPACE = getConfig('DOCKER_NAMESPACE', DEFAULT_DOCKER_NAMESPACE)
+
+      // A docker config of the job's own, written by ecrLogin. The agent's
+      // ~/.docker/config.json may name a credential helper for the registry,
+      // which docker prefers over a stored login, and sharing it would let
+      // concurrent jobs overwrite each other's token.
+      DOCKER_CONFIG = "${WORKSPACE}/.docker"
     }
     options {
       timeout(time: config.TIMEOUT?:6, unit: 'HOURS')
@@ -422,6 +432,43 @@ source .venv_dev/bin/activate
 // Compose override a deployment repo can keep at its root.
 @Field def DEPLOYMENT_COMPOSE_OVERRIDE = 'docker-compose.pipeline.override.yml'
 
+// Registry the compose files pull from when DOCKER_NAMESPACE is not set.
+@Field def DEFAULT_DOCKER_NAMESPACE = '251860034030.dkr.ecr.us-east-1.amazonaws.com'
+
+// Log in to the registry in DOCKER_NAMESPACE, if it is an ECR one, using
+// whatever AWS identity the agent has (normally its instance role). Over an
+// ssh DOCKER_HOST the login is stored on the agent, and compose hands it to
+// the remote daemon with each pull. DOCKER_HOST is set here too, so the
+// login is checked by the daemon that will pull, and works on an agent with
+// no daemon of its own.
+def ecrLogin(String dockerHost) {
+  def registry = env.DOCKER_NAMESPACE
+  def match = (registry =~ /^\d+\.dkr\.ecr\.([a-z0-9-]+)\.amazonaws\.com$/)
+  if (!match.find()) {
+    echo "Not an ECR registry, skipping login: ${registry}"
+    return
+  }
+  def region = match.group(1)
+  // Dropped before the script step runs: a Matcher is not serializable.
+  match = null
+
+  // pipefail so a failed get-login-password fails the step instead of
+  // logging in with an empty password. DOCKER_CONFIG is also where the CLI
+  // looks for plugins, so link in a per-user compose install if there is one,
+  // or `docker compose` would stop resolving.
+  sh """\
+#!/bin/bash
+set -euo pipefail
+mkdir -p "\$DOCKER_CONFIG"
+if [ -d "\$HOME/.docker/cli-plugins" ] && [ ! -e "\$DOCKER_CONFIG/cli-plugins" ]; then
+  ln -s "\$HOME/.docker/cli-plugins" "\$DOCKER_CONFIG/cli-plugins"
+fi
+aws ecr get-login-password --region '${region}' \\
+  | DOCKER_API_VERSION="1.44" DOCKER_HOST="ssh://${dockerHost}" \\
+    docker login --username AWS --password-stdin '${registry}'
+"""
+}
+
 def getDateEnv() {
   def buildNumber = env.BUILD_NUMBER.toInteger()
   if (buildNumber > 99999) {
@@ -474,6 +521,10 @@ def runDockerCommand(Map config, String commandPath, String command,
   echo "Running docker command on host: ${dockerHost}"
 
   try {
+    // Every stage pulls (pull_policy: always), and the token outlives a stage
+    // but not necessarily a whole run, so log in each time.
+    ecrLogin(dockerHost)
+
     // Run the docker command
     def dockerTag = sanitizeBranchNameForDockerTag(branch)
 
@@ -482,6 +533,7 @@ def runDockerCommand(Map config, String commandPath, String command,
       DATABASE_URL="" \
       DRUID_HOST="" \
       DOCKER_HOST="ssh://${dockerHost}" \
+      DOCKER_NAMESPACE="${env.DOCKER_NAMESPACE}" \
       DOCKER_TAG="${dockerTag}" \
       ZEN_ENV="${env.ZEN_ENV}" \
       PIPELINE_ENV="${env.PIPELINE_DEPLOYMENT_NAME}" \
