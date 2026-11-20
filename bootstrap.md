@@ -29,7 +29,7 @@ zen-dep-{env}/
 │   ├── aws-image-build-pipeline.yml
 │   └── cleanup.yml
 ├── pipeline.env
-├── docker-compose.pipeline.override.yml   # optional
+├── docker-compose.pipeline.override.yml   # needed unless PIPELINE_REPOSITORY is etl-pipeline
 ├── web.env
 ├── roledef.py
 ├── deployment_credential.py
@@ -70,6 +70,24 @@ PIPELINE_TARGET="{env_name}"          # e.g. "rwanda" — maps to pipeline/{env_
 ROLEDEF_TARGET="{env}_internal"
 ZEN_BASE_DIR="/home/share"            # Jenkins: the pipeline writes to $ZEN_BASE_DIR/pipeline/out on MACHINE
 ```
+
+### `docker-compose.pipeline.override.yml`
+
+The Jenkins library runs the pipeline from its own `docker-compose.pipeline.yml`,
+which pulls the `etl-pipeline` image. `PIPELINE_REPOSITORY` only tells the image
+build where to push, so when it names any other repository (such as the
+`etl-pipeline-{env}` above), set `image:` in this override to match, or Jenkins
+keeps running the generic image. VTAP does this:
+
+```yaml
+services:
+  pipeline:
+    image: ${DOCKER_NAMESPACE:-251860034030.dkr.ecr.us-east-1.amazonaws.com}/etl-pipeline-{env}:${DOCKER_TAG-}
+```
+
+Keep `DOCKER_NAMESPACE` and `DOCKER_TAG` as they are: the library sets them to
+the registry and the branch being run. The same file holds any other
+deployment-specific Compose settings, such as volumes or resource limits.
 
 ### `web.env`
 
@@ -269,6 +287,7 @@ The `buildspec.yml` in the main repo handles cloning the deployment repo, sourci
 
 - [ ] GitHub repo `zen-dep-{env}` created and GitHub App installed
 - [ ] `pipeline.env`, `web.env`, `roledef.py`, `deployment_credential.py` committed
+- [ ] `docker-compose.pipeline.override.yml` sets `image:` to the `PIPELINE_REPOSITORY` image, unless that is `etl-pipeline`
 - [ ] `config/` populated (from `create_deployment_config.sh` or manually)
 - [ ] `pipeline/` populated (from `create_deployment_pipeline.sh` or manually)
 - [ ] `.github/workflows/aws-image-build-pipeline.yml` committed with correct IAM role
