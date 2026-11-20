@@ -8,6 +8,7 @@ This repository contains reusable GitHub Actions and workflows that are referenc
 
 - **`.github/actions/build-pipeline-final`** — Builds the final pipeline Docker image for a given integration. It layers deployment-specific code (pipeline scripts, config, role definitions, credentials) on top of the shared `etl-pipeline-common` base image. The calling workflow must check out its repository first.
 - **`.github/actions/sanitize-branch`** — Derives a Docker-tag-safe name from the current branch. Used by anything that tags images by branch.
+- **`ci/`** — The `docker` Jenkins shared library, loaded with Library Path `ci/`. `vars/docker.groovy` runs a deployment's pipeline in Docker on its machine, using the compose file in `resources/docker-compose.pipeline.yml` and, if the deployment repo has one, its `docker-compose.pipeline.override.yml`.
 - **`.github/workflows/ecr-cleanup.yml`** — Reusable workflow (`workflow_call`) that deletes the images a branch produced once its PR closes. The build-config layout is passed as inputs, so the same workflow serves the main repo and the deployment repos.
 
 Callers reference these at `@main`, so a change here reaches every repo on its next run. That is the point — it is what stops the copies drifting apart again — but it also means a breaking change lands everywhere at once.
@@ -25,6 +26,7 @@ zen-dep-{env}/
 ├── .github/workflows/
 │   └── aws-image-build-pipeline.yml    # Triggers pipeline image builds
 ├── pipeline.env                        # Pipeline build config (ZEN_ENV, image name, targets)
+├── docker-compose.pipeline.override.yml  # Optional: layered over the pipeline compose by the docker Jenkins library
 ├── web.env                             # Web build config (ZEN_ENV, image name, roledef target)
 ├── roledef.py                          # Machine topology and service definitions
 ├── deployment_credential.py            # Credential mappings
@@ -47,7 +49,7 @@ zen-dep-{env}/
 
 ### Key environment files
 
-- **`pipeline.env`** — Defines `PIPELINE_REPOSITORY`, `ZEN_ENV`, `PIPELINE_TARGET`, `ROLEDEF_TARGET`. Used by the `build-pipeline-final` action.
+- **`pipeline.env`** — Defines `PIPELINE_REPOSITORY`, `ZEN_ENV`, `PIPELINE_TARGET`, `ROLEDEF_TARGET`. Used by the `build-pipeline-final` action. Also defines `ZEN_BASE_DIR`, the directory on the pipeline machine that output goes under, for the `docker` Jenkins library.
 - **`web.env`** — Defines `WEB_NAME`, `ZEN_ENV`, `ROLEDEF_TARGET`. Used by the CodeBuild web image build.
 
 ## Branch model
