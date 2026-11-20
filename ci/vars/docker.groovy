@@ -563,32 +563,36 @@ def runDockerCommand(Map config, String commandPath, String command,
     // Set DATABASE_URL to an empty string to avoid docker warnings.
     def composePs = "DOCKER_API_VERSION=\"1.44\" DATABASE_URL=\"\" PIPELINE_ENV=\"${env.PIPELINE_DEPLOYMENT_NAME}\" DOCKER_HOST=\"ssh://${dockerHost}\" docker compose -p \"${dockerProjectName}-etl\" -f docker-compose.pipeline.yml ${overrideFile} ps -a"
 
-    // Poll from one shell step rather than a waitUntil of sh and sleep steps:
-    // each of those logs a line per cycle, which buried long runs. The
-    // shebang keeps sh from tracing every command, and the state is printed
-    // only when it changes.
+    // Poll with one short shell step per cycle. A single shell step spanning
+    // the whole stage lost its durable-task heartbeat mid-run and failed with
+    // exit code -1, so keep each step to about a minute. The shebang keeps sh
+    // from tracing the command, sleeping inside the same step avoids a sleep
+    // step's log line per cycle, and the state is printed only when it
+    // changes.
     // Possible states are: [paused | restarting | removing | running | dead | created | exited]
     // https://docs.docker.com/reference/cli/docker/container/ls/#status
-    sh """\
+    def lastState = ''
+    while (true) {
+      def state = sh(
+        script: """\
 #!/bin/bash
 set -euo pipefail
-last=''
-while true; do
-  state=\$(${composePs} --format '{{.State}}')
-  if [ -z "\$state" ]; then
-    echo 'Could not get docker ps result' >&2
-    exit 1
-  fi
-  if [ "\$state" != "\$last" ]; then
-    echo "Docker container state: \$state"
-    last="\$state"
-  fi
-  case "\$state" in
-    exited|dead) break ;;
-  esac
-  sleep 60
-done
-"""
+${lastState ? 'sleep 60' : ''}
+${composePs} --format '{{.State}}'
+""",
+        returnStdout: true
+      ).trim()
+      if (state == '') {
+        throw new Exception('Could not get docker ps result')
+      }
+      if (state != lastState) {
+        echo "Docker container state: ${state}"
+        lastState = state
+      }
+      if (state == 'exited' || state == 'dead') {
+        break
+      }
+    }
 
     def result = sh(script: "${composePs} --format json", returnStdout: true).trim()
     if (result == '') {
