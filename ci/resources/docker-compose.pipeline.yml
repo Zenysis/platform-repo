@@ -23,7 +23,8 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - ZEN_ENV=${ZEN_ENV}
       - PIPELINE_ENV=${PIPELINE_ENV}
-      - DRUID_HOST=${DRUID_HOST}
+      - DRUID_HOST
+      - CLICKHOUSE_HOST
       - COMMAND=${COMMAND-echo Specify a pipeline command, e.g. "./pipeline/br/generate/zeus_generate run"}
       - COMMAND_PATH=${COMMAND_PATH-echo Specify the pipeline command path, e.g. "pipeline/br/generate"}
       - PIPELINE_START_TS=${PIPELINE_START_TS:-}
