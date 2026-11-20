@@ -482,7 +482,7 @@ def getDockerLogs(Map config, String dockerProjectName) {
   def dockerHost = getHostFromMachine(config.MACHINE)
 
   return sh(
-    script: "DOCKER_API_VERSION=\"1.44\" DATABASE_URL=\"\" DRUID_HOST=\"\" PIPELINE_ENV=\"${env.PIPELINE_DEPLOYMENT_NAME}\" DOCKER_HOST=\"ssh://${dockerHost}\" docker compose -p \"${dockerProjectName}-etl\" -f docker-compose.pipeline.yml ${overrideFile} logs --no-log-prefix",
+    script: "DOCKER_API_VERSION=\"1.44\" DATABASE_URL=\"\" PIPELINE_ENV=\"${env.PIPELINE_DEPLOYMENT_NAME}\" DOCKER_HOST=\"ssh://${dockerHost}\" docker compose -p \"${dockerProjectName}-etl\" -f docker-compose.pipeline.yml ${overrideFile} logs --no-log-prefix",
     returnStdout: true
   ).trim()
 }
@@ -531,7 +531,6 @@ def runDockerCommand(Map config, String commandPath, String command,
     sh """\
       DOCKER_API_VERSION="1.44" \
       DATABASE_URL="" \
-      DRUID_HOST="" \
       DOCKER_HOST="ssh://${dockerHost}" \
       DOCKER_NAMESPACE="${env.DOCKER_NAMESPACE}" \
       DOCKER_TAG="${dockerTag}" \
@@ -561,8 +560,8 @@ def runDockerCommand(Map config, String commandPath, String command,
   try {
     echo "Waiting for command to finish."
 
-    // Set DATABASE_URL and DRUID_HOST to empty strings to avoid docker warnings.
-    def composePs = "DOCKER_API_VERSION=\"1.44\" DATABASE_URL=\"\" DRUID_HOST=\"\" PIPELINE_ENV=\"${env.PIPELINE_DEPLOYMENT_NAME}\" DOCKER_HOST=\"ssh://${dockerHost}\" docker compose -p \"${dockerProjectName}-etl\" -f docker-compose.pipeline.yml ${overrideFile} ps -a"
+    // Set DATABASE_URL to an empty string to avoid docker warnings.
+    def composePs = "DOCKER_API_VERSION=\"1.44\" DATABASE_URL=\"\" PIPELINE_ENV=\"${env.PIPELINE_DEPLOYMENT_NAME}\" DOCKER_HOST=\"ssh://${dockerHost}\" docker compose -p \"${dockerProjectName}-etl\" -f docker-compose.pipeline.yml ${overrideFile} ps -a"
 
     // Poll from one shell step rather than a waitUntil of sh and sleep steps:
     // each of those logs a line per cycle, which buried long runs. The
