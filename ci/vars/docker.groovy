@@ -993,6 +993,63 @@ def notifyBuild(Map config) {
       channel: env.PIPELINE_FAILURES_CHANNEL,
       attachments: JsonOutput.toJson(attachments))
   }
+
+  // Email the same report through the Email Extension plugin, to the job's
+  // EMAIL_RECIPIENTS (comma-separated) or else the plugin's Default
+  // Recipients. email-ext only sends to those when the token is in `to`, and
+  // skips the email when the list resolves to nobody.
+  emailext(
+    to: config.EMAIL_RECIPIENTS ?: '$DEFAULT_RECIPIENTS',
+    subject: "${hasFailures ? 'FAILED: ' : ''}${title}",
+    mimeType: 'text/html',
+    body: formatEmailBody(title, blueOceanBuildUri()))
+}
+
+// Render the stage report as HTML for email. Failure lines carry Slack markup
+// (<url|text> links, *bold*), so convert that and escape everything else.
+@NonCPS
+def formatEmailBody(String title, String buildUrl) {
+  def statusLabels = [(SUCCESS): 'Succeeded', (PARTIAL_FAILURE): 'Partially failed', (FAILURE): 'Failed']
+  def statusColors = [(SUCCESS): '#2eb886', (PARTIAL_FAILURE): '#daa038', (FAILURE): '#a30200']
+  def html = new StringBuilder()
+  html << "<h2><a href=\"${escapeHtml(buildUrl)}\">${escapeHtml(title)}</a></h2>"
+  DETAILED_STAGE_STATUS.each { stageName, stageStatus ->
+    def label = statusLabels[stageStatus.status] ?: stageStatus.status
+    html << "<h3 style=\"color: ${statusColors[stageStatus.status] ?: '#000'}\">"
+    html << "${escapeHtml(stageName)}: ${escapeHtml(label)}</h3>"
+    if (stageStatus.failures) {
+      html << '<ul>'
+      stageStatus.failures.each { failure ->
+        html << "<li>${slackMarkupToHtml(failure)}</li>"
+      }
+      html << '</ul>'
+    }
+  }
+  return html.toString()
+}
+
+@NonCPS
+def slackMarkupToHtml(String text) {
+  def html = new StringBuilder()
+  def matcher = text =~ /<([^|>]+)\|([^>]+)>/
+  int last = 0
+  while (matcher.find()) {
+    html << formatSlackText(text.substring(last, matcher.start()))
+    html << "<a href=\"${escapeHtml(matcher.group(1))}\">${escapeHtml(matcher.group(2))}</a>"
+    last = matcher.end()
+  }
+  html << formatSlackText(text.substring(last))
+  return html.toString()
+}
+
+@NonCPS
+def formatSlackText(String text) {
+  return escapeHtml(text).replaceAll(/\*([^*\n]+)\*/, '<b>$1</b>').replace('\n', '<br>')
+}
+
+@NonCPS
+def escapeHtml(String text) {
+  return (text ?: '').replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
 }
 
 
