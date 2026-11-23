@@ -55,14 +55,14 @@ jobs:
       # Under workflow_call the github context is the caller's, so this checks
       # out the calling repository and its build env files.
       - name: Git clone the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Extract branch name
         id: extract-branch
         uses: Zenysis/platform-repo/.github/actions/sanitize-branch@main
 
       - name: Configure aws credentials
-        uses: aws-actions/configure-aws-credentials@v4.2.1
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ inputs.aws_role }}
           role-session-name: GitHub_AWS_via_FederatedOIDC
@@ -70,7 +70,7 @@ jobs:
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
 
       - name: Remove shared container images from AWS ECR
         if: inputs.shared_repositories != ''
