@@ -373,7 +373,7 @@ def getZenBaseDir() {
     return pipelineEnvBaseDir
   }
 
-  // Jobs whose Jenkinsfile is still in the main repo (rw, mz, et) have no
+  // Jobs whose Jenkinsfile is still in the main repo have no
   // pipeline.env. TODO: Drop this fallback, and get_zen_base_dir.py, once
   // they move to their deployment repos.
   def zenBaseDir = sh(script: """\
@@ -399,7 +399,7 @@ def getOverrideFile(String deployment) {
     return fileExists(DEPLOYMENT_COMPOSE_OVERRIDE) ? "-f ${DEPLOYMENT_COMPOSE_OVERRIDE}" : ''
   }
 
-  // Jobs whose Jenkinsfile is still in the main repo (rw, mz, et) have no
+  // Jobs whose Jenkinsfile is still in the main repo have no
   // pipeline.env. TODO: Drop this fallback, and get_docker_override_file.py,
   // once they move to their deployment repos.
   def overrideFile = sh(script: """\
